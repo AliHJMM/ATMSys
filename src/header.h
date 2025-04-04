@@ -2,12 +2,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+extern const char *USERS;
+
 struct Date
 {
     int month, day, year;
 };
 
-// all fields for each record of an account
 struct Record
 {
     int id;
@@ -29,12 +30,18 @@ struct User
     char password[50];
 };
 
-// authentication functions
 void loginMenu(char a[50], char pass[50]);
 void registerMenu(char a[50], char pass[50]);
 const char *getPassword(struct User u);
 
-// system function
+ system function
 void createNewAcc(struct User u);
 void mainMenu(struct User u);
 void checkAllAccounts(struct User u);
+
+
+void updateAccountInfo(struct User u);
+void checkSpecificAccount(struct User u);
+void makeTransaction(struct User u);
+void deleteAccount(struct User u);
+void transferOwnership(struct User u);
