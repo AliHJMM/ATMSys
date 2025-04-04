@@ -63,6 +63,7 @@ void initMenu(struct User *u)
     printf("\n\t\t[3]- exit\n");
     while (!r)
     {
+        printf("\nChoose an option: [1] Login  [2] Register  [3] Exit\n> ");
         scanf("%d", &option);
         switch (option)
         {
@@ -72,7 +73,7 @@ void initMenu(struct User *u)
                 const char* pw = getPassword(*u); // "no user found" or actual pass
                 if (strcmp(u->password, pw) == 0)
                 {
-                    printf("\n\nPassword Match!");
+                    printf("\n\n Password Match!\n");
                 }
                 else
                 {
@@ -93,9 +94,10 @@ void initMenu(struct User *u)
             sql_close();
             exit(1);
         default:
-            printf("Insert a valid operation!\n");
+            printf("Invalid option. Please choose 1, 2, or 3.\n");
         }
     }
+
 };
 
 int main()
