@@ -20,10 +20,11 @@ CREATE TABLE Accounts (
     date TEXT NOT NULL, -- stored as 'DD/MM/YYYY'
     balance REAL NOT NULL,
     country TEXT NOT NULL,
-    phone INTEGER NOT NULL,
-    account_nbr INTEGER NOT NULL,
+    phone INTEGER NOT NULL UNIQUE,
+    account_nbr INTEGER NOT NULL UNIQUE,
     FOREIGN KEY (user_id) REFERENCES Users(id)
 );
+
 
 -- Transfers table (optional, for future use)
 CREATE TABLE Accounts_Transfers (

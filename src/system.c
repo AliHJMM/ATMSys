@@ -158,12 +158,26 @@ invalid:
  
      // Account number
      while (1) {
-         printf("\nEnter the account number 8 to 12 digits: ");
-         if (scanf("%d", &r.accountNbr) == 1 &&
-             r.accountNbr >= 10000000 && r.accountNbr <= 999999999999) break;
-         printf("Account number must be numeric and between 8 to 12 digits.\n");
-         while (getchar() != '\n');
-     }
+        printf("\nEnter the account number (8 to 12 digits): ");
+        if (scanf("%d", &r.accountNbr) != 1 || r.accountNbr < 10000000 || r.accountNbr > 999999999999) {
+            printf("Account number must be numeric and between 8 to 12 digits.\n");
+            while (getchar() != '\n');
+            continue;
+        }
+    
+        // Check uniqueness
+        char checkQuery[128];
+        sqlite3_stmt *stmt;
+        sprintf(checkQuery, "SELECT 1 FROM Accounts WHERE account_nbr=%d;", r.accountNbr);
+        if (sqlite3_prepare_v2(db, checkQuery, -1, &stmt, NULL) == SQLITE_OK && sqlite3_step(stmt) == SQLITE_ROW) {
+            printf("Account number already exists. Please enter a different one.\n");
+            sqlite3_finalize(stmt);
+            continue;
+        }
+        sqlite3_finalize(stmt);
+        break;
+    }
+    
  
      // Country
      while (1) {
@@ -186,12 +200,26 @@ invalid:
  
      // Phone
      while (1) {
-         printf("\nEnter the phone number (8 digits): ");
-         if (scanf("%d", &r.phone) == 1 &&
-             r.phone >= 10000000 && r.phone <= 99999999) break;
-         printf("Phone number must be exactly 8 digits.\n");
-         while (getchar() != '\n');
-     }
+        printf("\nEnter the phone number (8 digits): ");
+        if (scanf("%d", &r.phone) != 1 || r.phone < 10000000 || r.phone > 99999999) {
+            printf("Phone number must be exactly 8 digits.\n");
+            while (getchar() != '\n');
+            continue;
+        }
+    
+        // Check uniqueness
+        char checkQuery[128];
+        sqlite3_stmt *stmt;
+        sprintf(checkQuery, "SELECT 1 FROM Accounts WHERE phone=%d;", r.phone);
+        if (sqlite3_prepare_v2(db, checkQuery, -1, &stmt, NULL) == SQLITE_OK && sqlite3_step(stmt) == SQLITE_ROW) {
+            printf("Phone number already exists. Please enter a different one.\n");
+            sqlite3_finalize(stmt);
+            continue;
+        }
+        sqlite3_finalize(stmt);
+        break;
+    }
+    
  
      // Deposit
      while (1) {
@@ -549,30 +577,29 @@ if (strcmp(type, "saving") == 0) {
  * Delete account by skipping the matching record instead of rewriting it.
  */
  void deleteAccount(struct User *u)
- {
-     int accountId;
-     printf("Enter the account ID to delete: ");
-     scanf("%d", &accountId);
- 
-     // Build query 
-     char query[256];
-     sprintf(query, 
-         "DELETE FROM Accounts WHERE account_id=%d AND user_id=%d;",
-         accountId, u->id);
- 
-     char *errMsg = NULL;
-     int rc = sqlite3_exec(db, query, NULL, NULL, &errMsg);
-     if (rc != SQLITE_OK) {
-         printf("Error deleting account: %s\n", errMsg);
-         sqlite3_free(errMsg);
-         // handle
-     } else if (sqlite3_changes(db) == 0) {
-         printf("No such account or not yours.\n");
-         // handle
-     } else {
-         success(u);
-     }
- }
+{
+    int accNumber;
+    printf("Enter the account number to delete: ");
+    scanf("%d", &accNumber);
+
+    // Build query to delete using account_nbr and user_id
+    char query[256];
+    sprintf(query, 
+        "DELETE FROM Accounts WHERE account_nbr=%d AND user_id=%d;",
+        accNumber, u->id);
+
+    char *errMsg = NULL;
+    int rc = sqlite3_exec(db, query, NULL, NULL, &errMsg);
+    if (rc != SQLITE_OK) {
+        printf("Error deleting account: %s\n", errMsg);
+        sqlite3_free(errMsg);
+    } else if (sqlite3_changes(db) == 0) {
+        printf("No such account or not yours.\n");
+    } else {
+        success(u);
+    }
+}
+
  
 
 /**

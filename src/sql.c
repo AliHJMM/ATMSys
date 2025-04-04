@@ -22,18 +22,19 @@ void sql_connect(void) {
         "  password TEXT NOT NULL"
         ");";
 
-    const char *sql_accounts =
+        const char *sql_accounts =
         "CREATE TABLE IF NOT EXISTS Accounts ("
         "  account_id INTEGER PRIMARY KEY AUTOINCREMENT,"
         "  user_id INTEGER NOT NULL,"
-        "  date TEXT,"
-        "  country TEXT,"
-        "  phone INTEGER,"
-        "  balance REAL,"
-        "  type TEXT,"
-        "  account_nbr INTEGER,"
+        "  date TEXT NOT NULL,"
+        "  country TEXT NOT NULL,"
+        "  phone INTEGER NOT NULL UNIQUE,"
+        "  balance REAL NOT NULL,"
+        "  type TEXT NOT NULL CHECK (type IN ('fixed01','fixed02','fixed03','current','saving')),"
+        "  account_nbr INTEGER NOT NULL UNIQUE,"
         "  FOREIGN KEY(user_id) REFERENCES Users(id)"
         ");";
+    
 
     char *errMsg = NULL;
     rc = sqlite3_exec(db, sql_users, NULL, NULL, &errMsg);
