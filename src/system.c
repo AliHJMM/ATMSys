@@ -68,37 +68,41 @@ void saveAccountToFile(FILE *ptr, struct User u, struct Record r)
 /**
  * Helper to let user retry or return to main menu.
  */
-void stayOrReturn(int notGood, void f(struct User u), struct User u)
-{
-    int option;
-    if (notGood == 0) {
-        system("clear");
-        printf("\n✖ Record not found!!\n");
-    invalid:
-        printf("\nEnter 0 to try again, 1 to return to main menu and 2 to exit: ");
-        scanf("%d", &option);
-        if (option == 0)
-            f(u);
-        else if (option == 1)
-            mainMenu(u);
-        else if (option == 2)
-            exit(0);
-        else {
-            printf("Insert a valid operation!\n");
-            goto invalid;
-        }
-    } else {
-        printf("\nEnter 1 to go to the main menu and 0 to exit: ");
-        scanf("%d", &option);
-    }
-    if (option == 1) {
-        system("clear");
-        mainMenu(u);
-    } else {
-        system("clear");
-        exit(1);
-    }
-}
+ void stayOrReturn(int notGood, void f(struct User u), struct User u)
+ {
+     int option;
+     if (notGood == 0) {
+         system("clear");
+         printf("\nNo account found with the given ID. Please check the ID and try again.\n");
+     invalid:
+         printf("\nEnter 0 to try again, 1 to return to main menu, or 2 to exit: ");
+         if (scanf("%d", &option) != 1) {
+             while (getchar() != '\n');
+             goto invalid;
+         }
+         if (option == 0)
+             f(u);
+         else if (option == 1)
+             mainMenu(u);
+         else if (option == 2)
+             exit(0);
+         else {
+             printf("Insert a valid operation!\n");
+             goto invalid;
+         }
+     } else {
+         printf("\nEnter 1 to go to the main menu and 0 to exit: ");
+         scanf("%d", &option);
+     }
+     if (option == 1) {
+         system("clear");
+         mainMenu(u);
+     } else {
+         system("clear");
+         exit(1);
+     }
+ }
+ 
 
 /**
  * After any successful operation, ask user whether to exit or go to menu.
@@ -233,50 +237,103 @@ invalid:
  */
  void updateAccountInfo(struct User u) {
     int accId;
-    printf("Enter account ID to update: ");
-    scanf("%d", &accId);
+    sqlite3_stmt *stmt;
+    char query[256];
 
-    // Check if account belongs to user:
-    // "SELECT account_id FROM Accounts WHERE account_id=accId AND user_id=u.id"
-    // if not found, call stayOrReturn(0, updateAccountInfo, u);
+    // Keep asking until a valid account ID for the user is found
+    while (1) {
+        printf("Enter account ID to update: ");
+        if (scanf("%d", &accId) != 1) {
+            while (getchar() != '\n');
+            printf("Invalid input. Please enter a numeric account ID.\n");
+            continue;
+        }
+
+        sprintf(query, "SELECT account_id FROM Accounts WHERE account_id=%d AND user_id=%d;", accId, u.id);
+        if (sqlite3_prepare_v2(db, query, -1, &stmt, NULL) != SQLITE_OK) {
+            printf("Database error: %s\n", sqlite3_errmsg(db));
+            return;
+        }
+
+        int exists = (sqlite3_step(stmt) == SQLITE_ROW);
+        sqlite3_finalize(stmt);
+
+        if (!exists) {
+            printf("Account not found or not yours. Please try again.\n");
+        } else {
+            break; // valid account
+        }
+    }
 
     int choice;
-    printf("What do you want to update?\n1. Country\n2. Phone\nChoose: ");
-    scanf("%d", &choice);
+    while (1) {
+        printf("What do you want to update?\n1. Country\n2. Phone\nChoose (1 or 2): ");
+        if (scanf("%d", &choice) != 1) {
+            while (getchar() != '\n');
+            printf("Invalid input. Please enter 1 or 2.\n");
+            continue;
+        }
+        if (choice != 1 && choice != 2) {
+            printf("Invalid choice. Please choose either 1 or 2.\n");
+            continue;
+        }
+        break;
+    }
 
-    char query[256];
+    char sql[256];
     char *errMsg = NULL;
 
     if (choice == 1) {
         char newCountry[50];
-        printf("Enter new country: ");
-        scanf("%s", newCountry);
-        sprintf(query,
-          "UPDATE Accounts SET country='%s' WHERE account_id=%d AND user_id=%d;",
-          newCountry, accId, u.id
-        );
+        while (1) {
+            printf("Enter new country (letters only, max 20 characters): ");
+            scanf("%s", newCountry);
+            int valid = strlen(newCountry) <= 20;
+            for (int i = 0; newCountry[i]; i++) {
+                if (!isalpha(newCountry[i])) {
+                    valid = 0;
+                    break;
+                }
+            }
+            if (!valid) {
+                printf("Invalid country name. Try again.\n");
+                continue;
+            }
+            break;
+        }
+
+        sprintf(sql, "UPDATE Accounts SET country='%s' WHERE account_id=%d AND user_id=%d;",
+                newCountry, accId, u.id);
+
     } else if (choice == 2) {
         int newPhone;
-        printf("Enter new phone: ");
-        scanf("%d", &newPhone);
-        sprintf(query,
-          "UPDATE Accounts SET phone=%d WHERE account_id=%d AND user_id=%d;",
-          newPhone, accId, u.id
-        );
+        while (1) {
+            printf("Enter new phone number (8 digits): ");
+            if (scanf("%d", &newPhone) != 1) {
+                while (getchar() != '\n');
+                printf("Invalid input. Digits only.\n");
+                continue;
+            }
+            if (newPhone < 10000000 || newPhone > 99999999) {
+                printf("Phone number must be exactly 8 digits.\n");
+                continue;
+            }
+            break;
+        }
+
+        sprintf(sql, "UPDATE Accounts SET phone=%d WHERE account_id=%d AND user_id=%d;",
+                newPhone, accId, u.id);
     }
 
-    int rc = sqlite3_exec(db, query, NULL, NULL, &errMsg);
+    int rc = sqlite3_exec(db, sql, NULL, NULL, &errMsg);
     if (rc != SQLITE_OK) {
         printf("Error updating: %s\n", errMsg);
         sqlite3_free(errMsg);
-        // handle error
-    } else if (sqlite3_changes(db) == 0) {
-        printf("Account not found or not yours.\n");
-        // handle not found
     } else {
         success(u);
     }
 }
+
 
 
 /**

@@ -1,4 +1,6 @@
 #include "header.h"
+#include <ctype.h>
+
 
 // Forward declaration
 void initMenu(struct User *u);
@@ -87,10 +89,38 @@ void initMenu(struct User *u)
             }
             break;
         case 2:
+        while (1) {
             printf("Enter new username: ");
             scanf("%s", u->name);
-            registerMenu(u->name, u->password);
-            r = 1;
+        
+            if (strlen(u->name) > 20 || strlen(u->name) == 0) {
+                printf("Username must be 1–20 characters.\n");
+                continue;
+            }
+            int valid = 1;
+            for (int i = 0; i < strlen(u->name); i++) {
+                if (!isalpha(u->name[i])) {
+                    valid = 0;
+                    break;
+                }
+            }
+            if (!valid) {
+                printf("Username must contain only letters (A-Z, a-z).\n");
+                continue;
+            }
+        
+            struct User temp;
+            strcpy(temp.name, u->name);
+            if (sql_select_user(&temp)) {
+                printf("Username already exists! Try another one.\n");
+                continue;
+            }
+            break;
+        }
+        
+        registerMenu(u->name, u->password);
+        r = 1;
+        
             break;
         case 3:
             sql_close();
