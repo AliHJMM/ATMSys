@@ -24,25 +24,3 @@ CREATE TABLE Accounts (
     account_nbr INTEGER NOT NULL UNIQUE,
     FOREIGN KEY (user_id) REFERENCES Users(id)
 );
-
-
--- Transfers table (optional, for future use)
-CREATE TABLE Accounts_Transfers (
-    transfer_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    receiver_user_id INTEGER NOT NULL,
-    transfered_account_id INTEGER NOT NULL,
-    date TEXT NOT NULL,
-    FOREIGN KEY (receiver_user_id) REFERENCES Users(id),
-    FOREIGN KEY (transfered_account_id) REFERENCES Accounts(account_id)
-);
-
--- Transactions table (optional, for future use)
-CREATE TABLE Transactions (
-    transaction_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    sender_account_id INTEGER NOT NULL,
-    receiver_account_id INTEGER NOT NULL,
-    amount REAL NOT NULL,
-    date TEXT NOT NULL,
-    FOREIGN KEY (sender_account_id) REFERENCES Accounts(account_id),
-    FOREIGN KEY (receiver_account_id) REFERENCES Accounts(account_id)
-);
