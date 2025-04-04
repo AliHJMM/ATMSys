@@ -1,7 +1,8 @@
 #include "header.h"
+#include "sqlite3.h" // if needed
 
-const char *USERS = "./data/users.txt";
-
+// No longer needed
+// const char *USERS = "./data/users.txt";
 
 void loginMenu(char a[50], char pass[50])
 {
@@ -9,7 +10,7 @@ void loginMenu(char a[50], char pass[50])
     printf("\n\n\n\t\t\t\t   Bank Management System\n");
     printf("\t\t\t\t\t User Login:\n");
     printf("Enter username: ");
-    fflush(stdout);  // Ensure the prompt is printed immediately
+    fflush(stdout);
     scanf("%s", a);
 
     printf("Enter the password to login: ");
@@ -17,69 +18,44 @@ void loginMenu(char a[50], char pass[50])
     scanf("%s", pass);
 }
 
-
-
+/**
+ * Instead of scanning users.txt, we call sql_select_user()
+ */
 const char *getPassword(struct User u)
 {
-    FILE *fp;
-    struct User userChecker;
+    // We'll attempt to find the user in the DB
+    struct User tmp;
+    strcpy(tmp.name, u.name);
 
-    if ((fp = fopen("./data/users.txt", "r")) == NULL)
-    {
-        printf("Error! opening file");
-        exit(1);
+    int found = sql_select_user(&tmp);
+    if (!found) {
+        return "no user found";
     }
-
-    while (fscanf(fp, "%d %s %s", &userChecker.id, userChecker.name, userChecker.password) != EOF)
-{
-    if (strcmp(userChecker.name, u.name) == 0)
-    {
-        fclose(fp);
-        return strdup(userChecker.password);
-    }
+    return strdup(tmp.password);
 }
 
-
-    fclose(fp);
-    return "no user found";
-}
-
+/**
+ * Instead of writing to users.txt, we call sql_insert_user().
+ */
 void registerMenu(char a[50], char pass[50])
 {
-    FILE *fp;
-    struct User userChecker;
-    int exists = 0;
-    int lastId = -1;
-
-    fp = fopen(USERS, "r");
-    if (fp != NULL)
-    {
-        while (fscanf(fp, "%d %s %s", &userChecker.id, userChecker.name, userChecker.password) != EOF)
-        {
-            lastId = userChecker.id;
-            if (strcmp(userChecker.name, a) == 0)
-            {
-                exists = 1;
-                break;
-            }
-        }
-        fclose(fp);
-    }
-
-    if (exists)
-    {
-        printf("✖ User already exists! Try another name.\n");
-        exit(1);
-    }
-
-    // Ask for password input
     printf("Enter a password for registration: ");
     fflush(stdout);
     scanf("%s", pass);
 
-    FILE *fw = fopen(USERS, "a");
-    fprintf(fw, "%d %s %s\n", lastId + 1, a, pass);
-    fclose(fw);
+    struct User newU;
+    newU.id = 0;
+    strcpy(newU.name, a);
+    strcpy(newU.password, pass);
 
-    printf("✔ Registration successful! Welcome, %s\n", a);
+    int ret = sql_insert_user(&newU);
+    if (ret == 0) {
+        printf("✖ User already exists! Try another name.\n");
+        exit(1);
+    } else if (ret == -1) {
+        printf("✖ Some DB error occurred.\n");
+        exit(1);
+    } else {
+        printf("✔ Registration successful! Welcome, %s\n", a);
+    }
 }

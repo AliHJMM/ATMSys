@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Forward-declare sqlite3 pointer
+// (Make sure you #include "sqlite3.h" in .c files, not usually in the header.)
+extern struct sqlite3 *db; 
+
 struct Date {
     int month, day, year;
 };
@@ -27,9 +31,6 @@ struct User {
     char password[50];
 };
 
-extern const char *USERS;
-extern const char *RECORDS;
-
 // auth.c
 void loginMenu(char a[50], char pass[50]);
 void registerMenu(char a[50], char pass[50]);
@@ -44,5 +45,18 @@ void checkSpecificAccount(struct User u);
 void makeTransaction(struct User u);
 void deleteAccount(struct User u);
 void transferOwnership(struct User u);
+
+// sql.c
+void sql_connect(void);
+void sql_close(void);
+
+// Insert/select user
+int sql_insert_user(struct User *u);
+int sql_select_user(struct User *u);  // Fill in id + password if found
+
+// Accounts
+int sql_create_account(struct User u, struct Record r);
+int sql_select_accounts_for_user(struct User u); 
+// etc. for updating, deleting, transferring ownership
 
 #endif

@@ -1,14 +1,11 @@
 #include "header.h"
+#include "sqlite3.h" // for db pointer, if needed
+#include <ctype.h>    // if you need it
 
-const char *RECORDS = "./data/records.txt";
+// We'll no longer reference RECORDS or getAccountFromFile
+// Instead, we use "sql_create_account" from sql.c
 
-/**
- * Correctly reads one line (9 space-separated fields) from records.txt:
- * Format: 
- *   id userId name accountNbr date country phone amount accountType
- * Example line:
- *   0 0 Alice  0 10/10/2012 Africa 291321234 22432.52 saving
- */
+
 int getAccountFromFile(FILE *ptr, char name[50], struct Record *r)
 {
     char dateStr[20];
@@ -127,417 +124,304 @@ invalid:
 /**
  * Create new account for current user.
  */
-void createNewAcc(struct User u)
-{
-    struct Record r, cr;
-    FILE *pf = fopen(RECORDS, "a+");
-    if (!pf) {
-        printf("Cannot open %s\n", RECORDS);
-        exit(1);
-    }
-
-noAccount:
-    system("clear");
-    printf("\t\t\t===== New record =====\n");
-
-    printf("\nEnter today's date (mm/dd/yyyy): ");
-    scanf("%d/%d/%d", &r.deposit.month, &r.deposit.day, &r.deposit.year);
-
-    printf("\nEnter the account number: ");
-    scanf("%d", &r.accountNbr);
-
-    // Rewind to check that this account doesn't already exist for this user
-    rewind(pf);
-    char dummy[50]; 
-    while (getAccountFromFile(pf, dummy, &cr)) {
-        if (strcmp(cr.name, u.name) == 0 && cr.accountNbr == r.accountNbr) {
-            printf("✖ This Account already exists for this user\n\n");
-            goto noAccount;
-        }
-    }
-
-    // Fill in rest
-    printf("\nEnter the country: ");
-    scanf("%s", r.country);
-    printf("\nEnter the phone number: ");
-    scanf("%d", &r.phone);
-    printf("\nEnter amount to deposit: $");
-    scanf("%lf", &r.amount);
-    printf("\nChoose the type of account:\n\t-> saving\n\t-> current\n\t-> fixed01\n\t-> fixed02\n\t-> fixed03\n\n\tEnter your choice: ");
-    scanf("%s", r.accountType);
-
-    // Just set a new ID, or reuse zero if you prefer
-    // (You can do something like r.id = someAutoIncrement if desired.)
-    r.id = 0; 
-
-    // Save to file
-    saveAccountToFile(pf, u, r);
-    fclose(pf);
-
-    success(u);
-}
+ void createNewAcc(struct User u)
+ {
+     struct Record r;
+     // fill in the struct with user input
+ 
+     system("clear");
+     printf("\t\t\t===== New record =====\n");
+ 
+     printf("\nEnter today's date (mm/dd/yyyy): ");
+     scanf("%d/%d/%d", &r.deposit.month, &r.deposit.day, &r.deposit.year);
+ 
+     printf("\nEnter the account number: ");
+     scanf("%d", &r.accountNbr);
+ 
+     printf("\nEnter the country: ");
+     scanf("%s", r.country);
+ 
+     printf("\nEnter the phone number: ");
+     scanf("%d", &r.phone);
+ 
+     printf("\nEnter amount to deposit: $");
+     scanf("%lf", &r.amount);
+ 
+     printf("\nChoose the type of account:\n\t-> saving\n\t-> current\n\t-> fixed01\n\t-> fixed02\n\t-> fixed03\n\n\tEnter your choice: ");
+     scanf("%s", r.accountType);
+ 
+     // We no longer do "saveAccountToFile"
+     // Instead:
+     int ok = sql_create_account(u, r);
+     if (!ok) {
+         printf("✖ Could not create account.\n");
+         // handle error or exit
+     }
+     success(u);
+ }
 
 /**
  * Print all accounts that belong to current user.
  */
-void checkAllAccounts(struct User u)
-{
-    FILE *pf = fopen(RECORDS, "r");
-    if (!pf) {
-        printf("Cannot open %s\n", RECORDS);
-        exit(1);
-    }
-
-    system("clear");
-    printf("\t\t====== All accounts from user: %s =====\n\n", u.name);
-
-    struct Record r;
-    char dummy[50];
-    int any = 0;
-    while (getAccountFromFile(pf, dummy, &r)) {
-        // belongs to user?
-        if (strcmp(r.name, u.name) == 0) {
-            any = 1;
-            printf("_____________________\n");
-            printf("Account number: %d\nDeposit Date: %02d/%02d/%04d\nCountry: %s\n"
-                   "Phone: %d\nAmount: $%.2f\nType: %s\n",
-                   r.accountNbr,
-                   r.deposit.month, r.deposit.day, r.deposit.year,
-                   r.country, r.phone, r.amount, r.accountType);
-        }
-    }
-    fclose(pf);
-
-    if (!any) {
-        printf("No accounts found.\n");
-    }
-    success(u);
-}
+ void checkAllAccounts(struct User u)
+ {
+     system("clear");
+     printf("\t\t====== All accounts from user: %s =====\n\n", u.name);
+ 
+     // We just call a function in sql.c that prints or returns all accounts
+     int count = sql_select_accounts_for_user(u);
+     if (count == 0) {
+         printf("No accounts found.\n");
+     }
+     success(u);
+ }
+ 
 
 /**
  * Update account info (e.g., country or phone).
  */
-void updateAccountInfo(struct User u)
-{
-    FILE *fp = fopen(RECORDS, "r");
-    FILE *temp = fopen("./data/temp.txt", "w");
-    if (!fp || !temp) {
-        printf("Cannot open files!\n");
-        exit(1);
-    }
-
-    struct Record r;
-    char name[50];
-    int accId, found = 0;
-
-    printf("Enter account number to update: ");
+ void updateAccountInfo(struct User u) {
+    int accId;
+    printf("Enter account ID to update: ");
     scanf("%d", &accId);
 
-    while (getAccountFromFile(fp, name, &r)) {
-        if (strcmp(r.name, u.name) == 0 && r.accountNbr == accId) {
-            int choice;
-            printf("What do you want to update?\n");
-            printf("1. Country\n2. Phone\nChoose: ");
-            scanf("%d", &choice);
+    // Check if account belongs to user:
+    // "SELECT account_id FROM Accounts WHERE account_id=accId AND user_id=u.id"
+    // if not found, call stayOrReturn(0, updateAccountInfo, u);
 
-            if (choice == 1) {
-                printf("Enter new country: ");
-                scanf("%s", r.country);
-            } else if (choice == 2) {
-                printf("Enter new phone: ");
-                scanf("%d", &r.phone);
-            }
-            found = 1;
-        }
-        // Always write the (possibly updated) record
-        fprintf(temp, "%d %d %s %d %02d/%02d/%04d %s %d %.2f %s\n",
-            r.id,
-            r.userId,
-            r.name,
-            r.accountNbr,
-            r.deposit.month,
-            r.deposit.day,
-            r.deposit.year,
-            r.country,
-            r.phone,
-            r.amount,
-            r.accountType);
+    int choice;
+    printf("What do you want to update?\n1. Country\n2. Phone\nChoose: ");
+    scanf("%d", &choice);
+
+    char query[256];
+    char *errMsg = NULL;
+
+    if (choice == 1) {
+        char newCountry[50];
+        printf("Enter new country: ");
+        scanf("%s", newCountry);
+        sprintf(query,
+          "UPDATE Accounts SET country='%s' WHERE account_id=%d AND user_id=%d;",
+          newCountry, accId, u.id
+        );
+    } else if (choice == 2) {
+        int newPhone;
+        printf("Enter new phone: ");
+        scanf("%d", &newPhone);
+        sprintf(query,
+          "UPDATE Accounts SET phone=%d WHERE account_id=%d AND user_id=%d;",
+          newPhone, accId, u.id
+        );
     }
 
-    fclose(fp);
-    fclose(temp);
-
-    remove(RECORDS);
-    rename("./data/temp.txt", RECORDS);
-
-    if (found)
+    int rc = sqlite3_exec(db, query, NULL, NULL, &errMsg);
+    if (rc != SQLITE_OK) {
+        printf("✖ Error updating: %s\n", errMsg);
+        sqlite3_free(errMsg);
+        // handle error
+    } else if (sqlite3_changes(db) == 0) {
+        printf("✖ Account not found or not yours.\n");
+        // handle not found
+    } else {
         success(u);
-    else
-        stayOrReturn(0, updateAccountInfo, u);
+    }
 }
+
 
 /**
  * Check details of a specific account.
  */
-void checkSpecificAccount(struct User u)
-{
-    FILE *fp = fopen(RECORDS, "r");
-    if (!fp) {
-        printf("Cannot open %s\n", RECORDS);
-        exit(1);
-    }
-
-    struct Record r;
-    char name[50];
-    int accId, found = 0;
-
-    printf("Enter the account number you want to view: ");
+ void checkSpecificAccount(struct User u) {
+    int accId;
+    printf("Enter account ID you want to view: ");
     scanf("%d", &accId);
 
-    while (getAccountFromFile(fp, name, &r)) {
-        if (strcmp(r.name, u.name) == 0 && r.accountNbr == accId) {
-            found = 1;
-            printf("\nAccount Number: %d\nDate: %d/%d/%d\nCountry: %s\nPhone: %d\nAmount: %.2f\nType: %s\n",
-                   r.accountNbr,
-                   r.deposit.month, r.deposit.day, r.deposit.year,
-                   r.country,
-                   r.phone,
-                   r.amount,
-                   r.accountType);
+    char query[256];
+    sprintf(query,
+      "SELECT date, country, phone, balance, type, account_nbr "
+      "FROM Accounts "
+      "WHERE account_id=%d AND user_id=%d;", accId, u.id);
 
-            // Show interest (similar to the working code)
-            double interest = 0;
-            if (strcmp(r.accountType, "saving") == 0)
-                interest = r.amount * 0.07;
-            else if (strcmp(r.accountType, "fixed01") == 0)
-                interest = r.amount * 0.04;
-            else if (strcmp(r.accountType, "fixed02") == 0)
-                interest = r.amount * 0.05;
-            else if (strcmp(r.accountType, "fixed03") == 0)
-                interest = r.amount * 0.08;
-
-            if (strcmp(r.accountType, "current") == 0) {
-                printf("Note: No interest for current accounts.\n");
-            } else {
-                printf("Potential interest: $%.2f\n", interest);
-            }
-        }
+    sqlite3_stmt *stmt;
+    if (sqlite3_prepare_v2(db, query, -1, &stmt, NULL) != SQLITE_OK) {
+        printf("SQL error: %s\n", sqlite3_errmsg(db));
+        return;
     }
+    int found = 0;
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        found = 1;
+        const char *date    = (const char*)sqlite3_column_text(stmt, 0);
+        const char *country = (const char*)sqlite3_column_text(stmt, 1);
+        int phone           = sqlite3_column_int(stmt, 2);
+        double balance      = sqlite3_column_double(stmt, 3);
+        const char *type    = (const char*)sqlite3_column_text(stmt, 4);
+        int accountNbr      = sqlite3_column_int(stmt, 5);
 
-    fclose(fp);
-    if (found)
-        success(u);
-    else
+        printf("\nAccount Number: %d\nDate: %s\nCountry: %s\nPhone: %d\nAmount: %.2f\nType: %s\n",
+            accountNbr, date, country, phone, balance, type);
+
+        // Calculate interest, etc...
+    }
+    sqlite3_finalize(stmt);
+
+    if (!found) {
         stayOrReturn(0, checkSpecificAccount, u);
+    } else {
+        success(u);
+    }
 }
+
 
 /**
  * Make deposit or withdrawal on an account (only if not fixed).
  */
-void makeTransaction(struct User u)
-{
-    FILE *fp = fopen(RECORDS, "r");
-    FILE *temp = fopen("./data/temp.txt", "w");
-    if (!fp || !temp) {
-        printf("Cannot open files!\n");
-        exit(1);
-    }
-
-    struct Record r;
-    char name[50];
-    int accId, found = 0;
-
-    printf("Enter the account number to transact with: ");
+ void makeTransaction(struct User u) {
+    int accId;
+    printf("Enter the account ID to transact with: ");
     scanf("%d", &accId);
 
-    while (getAccountFromFile(fp, name, &r)) {
-        if (strcmp(r.name, u.name) == 0 && r.accountNbr == accId) {
-            found = 1;
-            // Disallow transaction on fixed accounts
-            if (strstr(r.accountType, "fixed") != NULL) {
-                printf("✖ Transactions are not allowed on fixed accounts.\n");
-                fclose(fp);
-                fclose(temp);
-                remove("./data/temp.txt");
-                stayOrReturn(0, makeTransaction, u);
-                return;
-            }
-            int type;
-            double amount;
-            printf("Choose transaction type:\n1. Deposit\n2. Withdraw\nYour choice: ");
-            scanf("%d", &type);
-            printf("Enter amount: ");
-            scanf("%lf", &amount);
+    // 1) SELECT the account
+    char query[256];
+    sprintf(query, 
+        "SELECT balance, type FROM Accounts "
+        "WHERE account_id=%d AND user_id=%d;", 
+        accId, u.id);
 
-            if (type == 1) {
-                r.amount += amount;
-            } else if (type == 2) {
-                if (amount > r.amount) {
-                    printf("✖ Not enough balance!\n");
-                    fclose(fp);
-                    fclose(temp);
-                    remove("./data/temp.txt");
-                    stayOrReturn(0, makeTransaction, u);
-                    return;
-                }
-                r.amount -= amount;
-            }
-        }
-        // Rewrite record (possibly updated)
-        fprintf(temp, "%d %d %s %d %02d/%02d/%04d %s %d %.2f %s\n",
-            r.id,
-            r.userId,
-            r.name,
-            r.accountNbr,
-            r.deposit.month,
-            r.deposit.day,
-            r.deposit.year,
-            r.country,
-            r.phone,
-            r.amount,
-            r.accountType);
+    sqlite3_stmt *stmt;
+    if (sqlite3_prepare_v2(db, query, -1, &stmt, NULL) != SQLITE_OK) {
+        printf("Error: %s\n", sqlite3_errmsg(db));
+        return;
     }
-    fclose(fp);
-    fclose(temp);
+    double balance = 0;
+    char acctType[20];
+    int found = 0;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        found = 1;
+        balance = sqlite3_column_double(stmt, 0);
+        strcpy(acctType, (const char*)sqlite3_column_text(stmt, 1));
+    }
+    sqlite3_finalize(stmt);
 
-    remove(RECORDS);
-    rename("./data/temp.txt", RECORDS);
-
-    if (found)
-        success(u);
-    else
+    if (!found) {
         stayOrReturn(0, makeTransaction, u);
+        return;
+    }
+    // 2) if fixed => disallow
+    if (strstr(acctType, "fixed") != NULL) {
+        printf("✖ Transactions are not allowed on fixed accounts.\n");
+        stayOrReturn(0, makeTransaction, u);
+        return;
+    }
+
+    // 3) deposit or withdraw
+    int type;
+    double amount;
+    printf("Choose transaction type:\n1. Deposit\n2. Withdraw\nYour choice: ");
+    scanf("%d", &type);
+    printf("Enter amount: ");
+    scanf("%lf", &amount);
+
+    if (type == 2 && amount > balance) {
+        printf("✖ Not enough balance!\n");
+        stayOrReturn(0, makeTransaction, u);
+        return;
+    }
+    double newBal = (type == 1 ? balance + amount : balance - amount);
+
+    // 4) UPDATE the new balance
+    sprintf(query, 
+        "UPDATE Accounts SET balance=%.2f WHERE account_id=%d AND user_id=%d;",
+        newBal, accId, u.id
+    );
+    char *errMsg=NULL;
+    int rc = sqlite3_exec(db, query, NULL, NULL, &errMsg);
+    if (rc != SQLITE_OK) {
+        printf("Error: %s\n", errMsg);
+        sqlite3_free(errMsg);
+        // handle
+    }
+    else if (sqlite3_changes(db) == 0) {
+        printf("✖ Something failed or account not yours.\n");
+        // handle
+    } else {
+        success(u);
+    }
 }
+
 
 /**
  * Delete account by skipping the matching record instead of rewriting it.
  */
-void deleteAccount(struct User u)
-{
-    FILE *fp = fopen(RECORDS, "r");
-    FILE *temp = fopen("./data/temp.txt", "w");
-    if (!fp || !temp) {
-        printf("Cannot open files!\n");
-        exit(1);
-    }
-
-    struct Record r;
-    char name[50];
-    int accId, found = 0;
-
-    printf("Enter the account number to delete: ");
-    scanf("%d", &accId);
-
-    while (getAccountFromFile(fp, name, &r)) {
-        if (strcmp(r.name, u.name) == 0 && r.accountNbr == accId) {
-            found = 1;
-            // Skip writing -> effectively deletes it
-            continue;
-        }
-        // Write everything else
-        fprintf(temp, "%d %d %s %d %02d/%02d/%04d %s %d %.2f %s\n",
-            r.id,
-            r.userId,
-            r.name,
-            r.accountNbr,
-            r.deposit.month,
-            r.deposit.day,
-            r.deposit.year,
-            r.country,
-            r.phone,
-            r.amount,
-            r.accountType);
-    }
-
-    fclose(fp);
-    fclose(temp);
-
-    remove(RECORDS);
-    rename("./data/temp.txt", RECORDS);
-
-    if (found)
-        success(u);
-    else
-        stayOrReturn(0, deleteAccount, u);
-}
+ void deleteAccount(struct User u)
+ {
+     int accountId;
+     printf("Enter the account ID to delete: ");
+     scanf("%d", &accountId);
+ 
+     // Build query 
+     char query[256];
+     sprintf(query, 
+         "DELETE FROM Accounts WHERE account_id=%d AND user_id=%d;",
+         accountId, u.id);
+ 
+     char *errMsg = NULL;
+     int rc = sqlite3_exec(db, query, NULL, NULL, &errMsg);
+     if (rc != SQLITE_OK) {
+         printf("✖ Error deleting account: %s\n", errMsg);
+         sqlite3_free(errMsg);
+         // handle
+     } else if (sqlite3_changes(db) == 0) {
+         printf("✖ No such account or not yours.\n");
+         // handle
+     } else {
+         success(u);
+     }
+ }
+ 
 
 /**
  * Transfer ownership by updating the userId and r.name to the new owner.
  */
-void transferOwnership(struct User u)
-{
-    FILE *fp = fopen(RECORDS, "r");
-    FILE *temp = fopen("./data/temp.txt", "w");
-    if (!fp || !temp) {
-        printf("Cannot open files!\n");
-        exit(1);
-    }
-
-    struct Record r;
-    char name[50];
-    int accId, found = 0;
-    char newOwner[50];
-    int newUserId = -1;
-
-    printf("Enter the account number to transfer: ");
-    scanf("%d", &accId);
-
-    printf("Enter username to transfer ownership to: ");
-    scanf("%s", newOwner);
-
-    // Find the newOwner’s ID from users.txt
-    FILE *userFile = fopen(USERS, "r");
-    if (!userFile) {
-        printf("Cannot open %s\n", USERS);
-        exit(1);
-    }
-
-    struct User uTemp;
-    while (fscanf(userFile, "%d %s %s", &uTemp.id, uTemp.name, uTemp.password) != EOF) {
-        if (strcmp(uTemp.name, newOwner) == 0) {
-            newUserId = uTemp.id;
-            break;
-        }
-    }
-    fclose(userFile);
-
-    if (newUserId == -1) {
-        printf("✖ Target user does not exist.\n");
-        fclose(fp);
-        fclose(temp);
-        remove("./data/temp.txt");
-        stayOrReturn(0, transferOwnership, u);
-        return;
-    }
-
-    while (getAccountFromFile(fp, name, &r)) {
-        if (strcmp(r.name, u.name) == 0 && r.accountNbr == accId) {
-            found = 1;
-            r.userId = newUserId;
-            strcpy(r.name, newOwner); // rename the record
-        }
-        fprintf(temp, "%d %d %s %d %02d/%02d/%04d %s %d %.2f %s\n",
-            r.id,
-            r.userId,
-            r.name,
-            r.accountNbr,
-            r.deposit.month,
-            r.deposit.day,
-            r.deposit.year,
-            r.country,
-            r.phone,
-            r.amount,
-            r.accountType);
-    }
-
-    fclose(fp);
-    fclose(temp);
-
-    remove(RECORDS);
-    rename("./data/temp.txt", RECORDS);
-
-    if (found)
-        success(u);
-    else
-        stayOrReturn(0, transferOwnership, u);
-}
+ void transferOwnership(struct User u)
+ {
+     int accId;
+     printf("Enter the account ID to transfer: ");
+     scanf("%d", &accId);
+ 
+     char newOwner[50];
+     printf("Enter username to transfer ownership to: ");
+     scanf("%s", newOwner);
+ 
+     // 1) Find newOwner in Users
+     struct User target;
+     memset(&target, 0, sizeof(target));
+     strcpy(target.name, newOwner);
+     int found = sql_select_user(&target);
+     if (!found) {
+         printf("✖ Target user does not exist.\n");
+         stayOrReturn(0, transferOwnership, u);
+         return;
+     }
+ 
+     // 2) Update the account
+     char query[256];
+     sprintf(query,
+         "UPDATE Accounts SET user_id=%d "
+         "WHERE account_id=%d AND user_id=%d;",
+         target.id, accId, u.id
+     );
+ 
+     char *errMsg = NULL;
+     int rc = sqlite3_exec(db, query, NULL, NULL, &errMsg);
+     if (rc != SQLITE_OK) {
+         printf("Error transferring ownership: %s\n", errMsg);
+         sqlite3_free(errMsg);
+     } else if (sqlite3_changes(db) == 0) {
+         printf("✖ No such account or not yours.\n");
+         stayOrReturn(0, transferOwnership, u);
+         return;
+     } else {
+         success(u);
+     }
+ }
+ 
