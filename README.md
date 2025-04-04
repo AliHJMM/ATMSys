@@ -52,18 +52,6 @@ A terminal-based ATM management application written in **C**, using **SQLite** f
 
 ---
 
-## 🎁 Bonus Features
-
-- SQLite relational database integration
-- Strong input validation for all fields
-- Descriptive error messages and retry loops
-- Interest calculation logic with real-time date parsing
-- Modular design with `auth.c`, `system.c`, `sql.c`, and `header.h`
-- Future TUI (Terminal UI) enhancement with ANSI colors and formatting
-- [Planned] Real-time notifications for ownership transfer via IPC
-
----
-
 ## 🛠️ Technical Stack
 
 - **Language**: C (C99 standard)
@@ -76,6 +64,7 @@ A terminal-based ATM management application written in **C**, using **SQLite** f
 
 ## 📂 Project Structure
 
+```
 ATM-System/
 ├── data/
 │ ├── users.txt # [Legacy] User data (unused with DB)
@@ -90,6 +79,7 @@ ATM-System/
 │ └── main.c # Entry point with menus
 ├── Makefile # Build instructions
 └── README.md # Project documentation
+```
 
 ## 🚀 Getting Started
 
