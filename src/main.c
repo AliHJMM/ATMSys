@@ -77,10 +77,13 @@ void initMenu(struct User *u)
             }
             r = 1;
             break;
-        case 2:
-
+            case 2:
+            printf("Enter new username: ");
+            scanf("%s", u->name);
+            registerMenu(u->name, u->password);
             r = 1;
             break;
+        
         case 3:
             exit(1);
             break;
