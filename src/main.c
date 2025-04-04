@@ -6,50 +6,52 @@ void initMenu(struct User *u);
 void mainMenu(struct User u)
 {
     int option;
-    system("clear");
-    printf("\n\n\t\t======= ATM =======\n\n");
-    printf("\n\t\t-->> Feel free to choose one of the options below <<--\n");
-    printf("\n\t\t[1]- Create a new account\n");
-    printf("\n\t\t[2]- Update account information\n");
-    printf("\n\t\t[3]- Check accounts\n");
-    printf("\n\t\t[4]- Check list of owned account\n");
-    printf("\n\t\t[5]- Make Transaction\n");
-    printf("\n\t\t[6]- Remove existing account\n");
-    printf("\n\t\t[7]- Transfer ownership\n");
-    printf("\n\t\t[8]- Exit\n");
-    scanf("%d", &option);
-
-    switch (option)
+    while (1)
     {
-    case 1:
-        createNewAcc(u);
-        break;
-    case 2:
-        updateAccountInfo(u);
-        break;
-    case 3:
-        checkSpecificAccount(u);
-        break;
-    case 4:
-        checkAllAccounts(u);
-        break;
-    case 5:
-        makeTransaction(u);
-        break;
-    case 6:
-        deleteAccount(u);
-        break;
-    case 7:
-        transferOwnership(u);
-        break;
-    case 8:
-        // close DB, exit
-        sql_close();
-        exit(1);
-    default:
-        printf("Invalid operation!\n");
+        system("clear");
+        printf("\n\n\t\t======= ATM =======\n\n");
+        printf("\n\t\t-->> Feel free to choose one of the options below <<--\n");
+        printf("\n\t\t[1]- Create a new account\n");
+        printf("\n\t\t[2]- Update account information\n");
+        printf("\n\t\t[3]- Check accounts\n");
+        printf("\n\t\t[4]- Check list of owned account\n");
+        printf("\n\t\t[5]- Make Transaction\n");
+        printf("\n\t\t[6]- Remove existing account\n");
+        printf("\n\t\t[7]- Transfer ownership\n");
+        printf("\n\t\t[8]- Exit\n");
+        printf("\nEnter your choice: ");
+
+        if (scanf("%d", &option) != 1) {
+            while (getchar() != '\n'); // clear invalid input
+            printf("\nInvalid input! Please enter a number between 1 and 8.\n");
+            printf("Press Enter to try again...");
+            getchar();
+            continue;
+        }
+
+        switch (option)
+        {
+        case 1: createNewAcc(u); break;
+        case 2: updateAccountInfo(u); break;
+        case 3: checkSpecificAccount(u); break;
+        case 4: checkAllAccounts(u); break;
+        case 5: makeTransaction(u); break;
+        case 6: deleteAccount(u); break;
+        case 7: transferOwnership(u); break;
+        case 8:
+            sql_close();
+            exit(0);
+        default:
+            printf("\nInvalid choice! Please enter a number between 1 and 8.\n");
+            printf("Press Enter to try again...");
+            while (getchar() != '\n'); // clear buffer
+            getchar(); // wait for enter
+            break;
+        }
     }
-};
+}
+
+
 
 void initMenu(struct User *u)
 {
