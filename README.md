@@ -66,19 +66,18 @@ A terminal-based ATM management application written in **C**, using **SQLite** f
 
 ```
 ATM-System/
-├── data/
-│ ├── users.txt # [Legacy] User data (unused with DB)
-│ ├── records.txt # [Legacy] Account data (unused with DB)
 ├── db/
-│ └── atm.db # SQLite database
+│ ├── atm.db       # SQLite database
+│ └── schema.sql   # SQL schema for initializing the database
 ├── src/
-│ ├── auth.c # Login and registration logic
-│ ├── system.c # Main business logic (account ops)
-│ ├── sql.c # SQLite query handling
-│ ├── header.h # Structs, prototypes, and constants
-│ └── main.c # Entry point with menus
-├── Makefile # Build instructions
-└── README.md # Project documentation
+│ ├── auth.c       # Login and registration logic
+│ ├── system.c     # Main business logic (account ops)
+│ ├── sql.c        # SQLite query handling
+│ ├── header.h     # Structs, prototypes, and constants
+│ └── main.c       # Entry point with menus
+├── Makefile       # Build instructions
+└── README.md      # Project documentation
+
 ```
 
 ## 🚀 Getting Started
