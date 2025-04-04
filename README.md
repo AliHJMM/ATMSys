@@ -93,7 +93,7 @@ ATM-System/
 1. Clone the repository:
 
 ```bash
-git clone https://learn.reboot01.com/git/alihasan6/atm-management-system
+git clone https://github.com/AliHJMM/ATMSys
 cd atm-system
 ```
 
