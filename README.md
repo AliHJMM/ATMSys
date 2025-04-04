@@ -48,7 +48,6 @@ A terminal-based ATM management application written in **C**, using **SQLite** f
 ### 🔁 Transfer Ownership
 
 - Transfer account to another registered user
-- Instant update in database
 
 ---
 
