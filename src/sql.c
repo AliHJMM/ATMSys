@@ -159,8 +159,8 @@ int sql_create_account(struct User u, struct Record r) {
  */
 int sql_select_accounts_for_user(struct User u) {
     char query[256];
-    sprintf(query, "SELECT account_id, date, country, phone, balance, type, account_nbr "
-                   "FROM Accounts WHERE user_id=%d;", u.id);
+    sprintf(query, "SELECT account_id, date, country, phone, balance, type, account_nbr FROM Accounts WHERE user_id=%d;", u.id);
+
 
     sqlite3_stmt *stmt;
     if (sqlite3_prepare_v2(db, query, -1, &stmt, NULL) != SQLITE_OK) {

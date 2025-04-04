@@ -72,22 +72,23 @@ void initMenu(struct User *u)
         switch (option)
         {
         case 1:
-            loginMenu(u->name, u->password);
-            {
-                const char* pw = getPassword(*u); // "no user found" or actual pass
-                if (strcmp(u->password, pw) == 0)
-                {
-                    printf("\n\n Password Match!\n");
-                }
-                else
-                {
-                    printf("\nIncorrect username or password. Please try again.\n");
-                    sql_close();
-                    exit(1);
-                }
+        loginMenu(u->name, u->password);
+        {
+            struct User temp;
+            strcpy(temp.name, u->name);
+            if (sql_select_user(&temp) && strcmp(u->password, temp.password) == 0) {
+                u->id = temp.id; // ✅ Set ID correctly
+                strcpy(u->password, temp.password); // optional but safe
+                printf("\n\n Password Match!\n");
                 r = 1;
+            } else {
+                printf("\nIncorrect username or password. Please try again.\n");
+                sql_close();
+                exit(1);
             }
-            break;
+        }
+        break;
+    
         case 2:
         while (1) {
             printf("Enter new username: ");
