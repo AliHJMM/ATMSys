@@ -67,40 +67,52 @@ int getAccountFromFile(FILE *ptr, char name[50], struct Record *r)
 /**
  * Helper to let user retry or return to main menu.
  */
- void stayOrReturn(int notGood, void f(struct User *), struct User *u)
+ void stayOrReturn(int errorCode, void f(struct User *), struct User *u)
  {
      int option;
-     if (notGood == 0) {
-         system("clear");
-         printf("\nNo account found with the given ID. Please check the ID and try again.\n");
-     invalid:
-         printf("\nEnter 0 to try again, 1 to return to main menu, or 2 to exit: ");
-         if (scanf("%d", &option) != 1) {
-             while (getchar() != '\n');
-             goto invalid;
-         }
-         if (option == 0)
-             f(u);
-         else if (option == 1)
-             mainMenu(u);
-         else if (option == 2)
-             exit(0);
-         else {
-             printf("Insert a valid operation!\n");
-             goto invalid;
-         }
-     } else {
-         printf("\nEnter 1 to go to the main menu and 0 to exit: ");
-         scanf("%d", &option);
+     system("clear");
+ 
+     // Print message based on the error code
+     switch (errorCode) {
+         case 1:
+             printf("No account found with the given ID.\n");
+             break;
+         case 2:
+             printf("Not enough balance!\n");
+             break;
+         case 3:
+             printf("Invalid transaction type! Please enter 1 or 2.\n");
+             break;
+         case 4:
+             printf("Invalid input. Must be numeric.\n");
+             break;
+         case 5:
+             printf("Transactions not allowed on fixed accounts.\n");
+             break;
+         default:
+             printf("An error occurred.\n");
+             break;
      }
-     if (option == 1) {
-         system("clear");
+ 
+ invalid_input:
+     printf("\nEnter 0 to try again, 1 to return to main menu, or 2 to exit: ");
+     if (scanf("%d", &option) != 1) {
+         while (getchar() != '\n');
+         goto invalid_input;
+     }
+ 
+     if (option == 0) {
+         f(u);
+     } else if (option == 1) {
          mainMenu(u);
+     } else if (option == 2) {
+         exit(0);
      } else {
-         system("clear");
-         exit(1);
+         printf("Invalid option.\n");
+         goto invalid_input;
      }
  }
+ 
  
 
 /**
@@ -384,10 +396,19 @@ invalid:
  */
  void makeTransaction(struct User *u) {
     int accId;
-    printf("Enter the account ID to transact with: ");
-    scanf("%d", &accId);
 
-    // 1) SELECT the account
+    // 1) Ask for account ID with validation
+    while (1) {
+        printf("Enter the account ID to transact with: ");
+        if (scanf("%d", &accId) != 1) {
+            while (getchar() != '\n');
+            stayOrReturn(4, makeTransaction, u); // invalid input (non-numeric)
+            return;
+        }
+        break;
+    }
+
+    // 2) SELECT the account
     char query[256];
     sprintf(query, 
         "SELECT balance, type FROM Accounts "
@@ -399,6 +420,7 @@ invalid:
         printf("Error: %s\n", sqlite3_errmsg(db));
         return;
     }
+
     double balance = 0;
     char acctType[20];
     int found = 0;
@@ -410,50 +432,72 @@ invalid:
     sqlite3_finalize(stmt);
 
     if (!found) {
-        stayOrReturn(0, makeTransaction, u);
-        return;
-    }
-    // 2) if fixed => disallow
-    if (strstr(acctType, "fixed") != NULL) {
-        printf("Transactions are not allowed on fixed accounts.\n");
-        stayOrReturn(0, makeTransaction, u);
+        stayOrReturn(1, makeTransaction, u); // no account found
         return;
     }
 
-    // 3) deposit or withdraw
+    // 3) if fixed => disallow
+    if (strstr(acctType, "fixed") != NULL) {
+        stayOrReturn(5, makeTransaction, u); // disallowed transaction
+        return;
+    }
+
+    // 4) Ask for transaction type with validation
     int type;
+    while (1) {
+        printf("Choose transaction type:\n1. Deposit\n2. Withdraw\nYour choice: ");
+        if (scanf("%d", &type) != 1) {
+            while (getchar() != '\n');
+            stayOrReturn(4, makeTransaction, u); // non-numeric input
+            return;
+        }
+        if (type != 1 && type != 2) {
+            stayOrReturn(3, makeTransaction, u); // invalid transaction type
+            return;
+        }
+        break;
+    }
+
+    // 5) Ask for amount with validation
     double amount;
-    printf("Choose transaction type:\n1. Deposit\n2. Withdraw\nYour choice: ");
-    scanf("%d", &type);
-    printf("Enter amount: ");
-    scanf("%lf", &amount);
+    while (1) {
+        printf("Enter amount: ");
+        if (scanf("%lf", &amount) != 1) {
+            while (getchar() != '\n');
+            stayOrReturn(4, makeTransaction, u);
+            return;
+        }
+        if (amount <= 0) {
+            printf("Amount must be positive.\n");
+            continue;
+        }
+        break;
+    }
 
     if (type == 2 && amount > balance) {
-        printf("Not enough balance!\n");
-        stayOrReturn(0, makeTransaction, u);
+        stayOrReturn(2, makeTransaction, u); // insufficient funds
         return;
     }
+
+    // 6) Perform the transaction
     double newBal = (type == 1 ? balance + amount : balance - amount);
 
-    // 4) UPDATE the new balance
     sprintf(query, 
         "UPDATE Accounts SET balance=%.2f WHERE account_id=%d AND user_id=%d;",
         newBal, accId, u->id
     );
-    char *errMsg=NULL;
+    char *errMsg = NULL;
     int rc = sqlite3_exec(db, query, NULL, NULL, &errMsg);
     if (rc != SQLITE_OK) {
         printf("Error: %s\n", errMsg);
         sqlite3_free(errMsg);
-        // handle
-    }
-    else if (sqlite3_changes(db) == 0) {
+    } else if (sqlite3_changes(db) == 0) {
         printf("Something failed or account not yours.\n");
-        // handle
     } else {
         success(u);
     }
 }
+
 
 
 /**
