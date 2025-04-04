@@ -1,11 +1,10 @@
 #include "header.h"
 #include <ctype.h>
 
-
 // Forward declaration
 void initMenu(struct User *u);
 
-void mainMenu(struct User u)
+void mainMenu(struct User *u)
 {
     int option;
     while (1)
@@ -24,7 +23,7 @@ void mainMenu(struct User u)
         printf("\nEnter your choice: ");
 
         if (scanf("%d", &option) != 1) {
-            while (getchar() != '\n'); // clear invalid input
+            while (getchar() != '\n');
             printf("\nInvalid input! Please enter a number between 1 and 8.\n");
             printf("Press Enter to try again...");
             getchar();
@@ -46,13 +45,12 @@ void mainMenu(struct User u)
         default:
             printf("\nInvalid choice! Please enter a number between 1 and 8.\n");
             printf("Press Enter to try again...");
-            while (getchar() != '\n'); // clear buffer
-            getchar(); // wait for enter
+            while (getchar() != '\n');
+            getchar();
             break;
         }
     }
 }
-
 
 
 void initMenu(struct User *u)
@@ -72,56 +70,56 @@ void initMenu(struct User *u)
         switch (option)
         {
         case 1:
-        loginMenu(u->name, u->password);
-        {
-            struct User temp;
-            strcpy(temp.name, u->name);
-            if (sql_select_user(&temp) && strcmp(u->password, temp.password) == 0) {
-                u->id = temp.id; // ✅ Set ID correctly
-                strcpy(u->password, temp.password); // optional but safe
-                printf("\n\n Password Match!\n");
-                r = 1;
-            } else {
-                printf("\nIncorrect username or password. Please try again.\n");
-                sql_close();
-                exit(1);
-            }
-        }
-        break;
-    
-        case 2:
-        while (1) {
-            printf("Enter new username: ");
-            scanf("%s", u->name);
-        
-            if (strlen(u->name) > 20 || strlen(u->name) == 0) {
-                printf("Username must be 1–20 characters.\n");
-                continue;
-            }
-            int valid = 1;
-            for (int i = 0; i < strlen(u->name); i++) {
-                if (!isalpha(u->name[i])) {
-                    valid = 0;
-                    break;
+            loginMenu(u->name, u->password);
+            {
+                struct User temp;
+                strcpy(temp.name, u->name);
+                if (sql_select_user(&temp) && strcmp(u->password, temp.password) == 0) {
+                    u->id = temp.id; // ✅ Set ID correctly
+                    strcpy(u->password, temp.password); // optional but safe
+                    printf("\n\n Password Match!\n");
+                    r = 1;
+                } else {
+                    printf("\nIncorrect username or password. Please try again.\n");
+                    sql_close();
+                    exit(1);
                 }
             }
-            if (!valid) {
-                printf("Username must contain only letters (A-Z, a-z).\n");
-                continue;
-            }
-        
-            struct User temp;
-            strcpy(temp.name, u->name);
-            if (sql_select_user(&temp)) {
-                printf("Username already exists! Try another one.\n");
-                continue;
-            }
             break;
-        }
-        
-        registerMenu(u->name, u->password);
-        r = 1;
-        
+        case 2:
+            while (1) {
+                printf("Enter new username: ");
+                scanf("%s", u->name);
+
+                if (strlen(u->name) > 20 || strlen(u->name) == 0) {
+                    printf("Username must be 1–20 characters.\n");
+                    continue;
+                }
+                int valid = 1;
+                for (int i = 0; i < strlen(u->name); i++) {
+                    if (!isalpha(u->name[i])) {
+                        valid = 0;
+                        break;
+                    }
+                }
+                if (!valid) {
+                    printf("Username must contain only letters (A-Z, a-z).\n");
+                    continue;
+                }
+
+                struct User temp;
+                strcpy(temp.name, u->name);
+                if (sql_select_user(&temp)) {
+                    printf("Username already exists! Try another one.\n");
+                    continue;
+                }
+                break;
+            }
+
+            registerMenu(u->name, u->password);
+            // After register, select again to get correct id
+            sql_select_user(u);
+            r = 1;
             break;
         case 3:
             sql_close();
@@ -130,24 +128,19 @@ void initMenu(struct User *u)
             printf("Invalid option. Please choose 1, 2, or 3.\n");
         }
     }
-
-};
+}
 
 int main()
 {
-    // 1) connect to DB
     sql_connect();
 
-    struct User u;
-    u.id = 0;
+    struct User u = {0};
     strcpy(u.name, "");
     strcpy(u.password, "");
 
-    // 2) do the initMenu + mainMenu
     initMenu(&u);
-    mainMenu(u);
+    mainMenu(&u);
 
-    // If user never chooses exit, close DB before returning
     sql_close();
     return 0;
 }

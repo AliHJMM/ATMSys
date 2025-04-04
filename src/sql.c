@@ -100,32 +100,39 @@ void sql_close(void) {
  * Look up user by name. If found, fill in user->id and user->password. Return 1. 
  * If not found, return 0.
  */
-int sql_select_user(struct User *u) {
+ int sql_select_user(struct User *u) {
     char query[256];
     sprintf(query, 
         "SELECT id, password FROM Users WHERE name='%s';", u->name);
+    
     sqlite3_stmt *stmt;
+    printf("[DEBUG] Looking up user: %s\n", u->name);  // Added debug
 
     if (sqlite3_prepare_v2(db, query, -1, &stmt, NULL) != SQLITE_OK) {
         printf("SQL prepare error (select user): %s\n", sqlite3_errmsg(db));
         return 0;
     }
+
     int ret = 0;
     if (sqlite3_step(stmt) == SQLITE_ROW) {
-        // col 0 => id, col 1 => password
         u->id = sqlite3_column_int(stmt, 0);
         const unsigned char *pw = sqlite3_column_text(stmt, 1);
         strcpy(u->password, (const char*)pw);
+        printf("[DEBUG] Found user %s with ID %d and password %s\n", u->name, u->id, u->password); // Added debug
         ret = 1;
+    } else {
+        printf("[DEBUG] User %s not found in database.\n", u->name); // Added debug
     }
+
     sqlite3_finalize(stmt);
     return ret;
 }
 
+
 /**
  * Insert a new account record. 
  */
-int sql_create_account(struct User u, struct Record r) {
+ int sql_create_account(struct User *u, struct Record r) {
     char dateStr[20];
     sprintf(dateStr, "%02d/%02d/%04d", 
         r.deposit.month, r.deposit.day, r.deposit.year);
@@ -134,7 +141,7 @@ int sql_create_account(struct User u, struct Record r) {
     sprintf(query,
         "INSERT INTO Accounts(user_id, date, country, phone, balance, type, account_nbr) "
         "VALUES(%d, '%s', '%s', %d, %.2f, '%s', %d);",
-        u.id,
+        u->id,
         dateStr,
         r.country,
         r.phone,
@@ -153,14 +160,9 @@ int sql_create_account(struct User u, struct Record r) {
     return 1;
 }
 
-/**
- * Example function to print all accounts for a given user.
- * Returns how many accounts found.
- */
-int sql_select_accounts_for_user(struct User u) {
+int sql_select_accounts_for_user(struct User *u) {
     char query[256];
-    sprintf(query, "SELECT account_id, date, country, phone, balance, type, account_nbr FROM Accounts WHERE user_id=%d;", u.id);
-
+    sprintf(query, "SELECT account_id, date, country, phone, balance, type, account_nbr FROM Accounts WHERE user_id=%d;", u->id);
 
     sqlite3_stmt *stmt;
     if (sqlite3_prepare_v2(db, query, -1, &stmt, NULL) != SQLITE_OK) {

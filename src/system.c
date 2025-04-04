@@ -46,29 +46,28 @@ int getAccountFromFile(FILE *ptr, char name[50], struct Record *r)
 /**
  * Writes one record (9 fields) to the file in the same format used by getAccountFromFile().
  */
-void saveAccountToFile(FILE *ptr, struct User u, struct Record r)
-{
-    // Example line:
-    //   0 0 Alice  0 10/10/2012 Africa 291321234 22432.52 saving
-    fprintf(ptr, "%d %d %s %d %02d/%02d/%04d %s %d %.2f %s\n",
-        r.id,
-        u.id,         // the user ID of the record
-        u.name,       // the username
-        r.accountNbr,
-        r.deposit.month,
-        r.deposit.day,
-        r.deposit.year,
-        r.country,
-        r.phone,
-        r.amount,
-        r.accountType
-    );
-}
+ void saveAccountToFile(FILE *ptr, struct User u, struct Record r)
+ {
+     fprintf(ptr, "%d %d %s %d %02d/%02d/%04d %s %d %.2f %s\n",
+         r.id,
+         u.id,         // ✅ use dot (not ->)
+         u.name,       // ✅ use dot (not ->)
+         r.accountNbr,
+         r.deposit.month,
+         r.deposit.day,
+         r.deposit.year,
+         r.country,
+         r.phone,
+         r.amount,
+         r.accountType
+     );
+ }
+ 
 
 /**
  * Helper to let user retry or return to main menu.
  */
- void stayOrReturn(int notGood, void f(struct User u), struct User u)
+ void stayOrReturn(int notGood, void f(struct User *), struct User *u)
  {
      int option;
      if (notGood == 0) {
@@ -107,7 +106,7 @@ void saveAccountToFile(FILE *ptr, struct User u, struct Record r)
 /**
  * After any successful operation, ask user whether to exit or go to menu.
  */
-void success(struct User u)
+void success(struct User *u)
 {
     int option;
     printf("\nSuccess!\n\n");
@@ -128,7 +127,7 @@ invalid:
 /**
  * Create new account for current user.
  */
- void createNewAcc(struct User u)
+ void createNewAcc(struct User *u)
  {
      struct Record r;
      system("clear");
@@ -218,10 +217,10 @@ invalid:
 /**
  * Print all accounts that belong to current user.
  */
- void checkAllAccounts(struct User u)
+ void checkAllAccounts(struct User *u)
  {
      system("clear");
-     printf("\t\t====== All accounts from user: %s =====\n\n", u.name);
+     printf("\t\t====== All accounts from user: %s =====\n\n", u->name);
  
      // We just call a function in sql.c that prints or returns all accounts
      int count = sql_select_accounts_for_user(u);
@@ -235,7 +234,7 @@ invalid:
 /**
  * Update account info (e.g., country or phone).
  */
- void updateAccountInfo(struct User u) {
+ void updateAccountInfo(struct User *u) {
     int accId;
     sqlite3_stmt *stmt;
     char query[256];
@@ -249,7 +248,7 @@ invalid:
             continue;
         }
 
-        sprintf(query, "SELECT account_id FROM Accounts WHERE account_id=%d AND user_id=%d;", accId, u.id);
+        sprintf(query, "SELECT account_id FROM Accounts WHERE account_id=%d AND user_id=%d;", accId, u->id);
         if (sqlite3_prepare_v2(db, query, -1, &stmt, NULL) != SQLITE_OK) {
             printf("Database error: %s\n", sqlite3_errmsg(db));
             return;
@@ -303,7 +302,7 @@ invalid:
         }
 
         sprintf(sql, "UPDATE Accounts SET country='%s' WHERE account_id=%d AND user_id=%d;",
-                newCountry, accId, u.id);
+                newCountry, accId, u->id);
 
     } else if (choice == 2) {
         int newPhone;
@@ -322,7 +321,7 @@ invalid:
         }
 
         sprintf(sql, "UPDATE Accounts SET phone=%d WHERE account_id=%d AND user_id=%d;",
-                newPhone, accId, u.id);
+                newPhone, accId, u->id);
     }
 
     int rc = sqlite3_exec(db, sql, NULL, NULL, &errMsg);
@@ -339,7 +338,7 @@ invalid:
 /**
  * Check details of a specific account.
  */
- void checkSpecificAccount(struct User u) {
+ void checkSpecificAccount(struct User *u) {
     int accId;
     printf("Enter account ID you want to view: ");
     scanf("%d", &accId);
@@ -348,7 +347,7 @@ invalid:
     sprintf(query,
       "SELECT date, country, phone, balance, type, account_nbr "
       "FROM Accounts "
-      "WHERE account_id=%d AND user_id=%d;", accId, u.id);
+      "WHERE account_id=%d AND user_id=%d;", accId, u->id);
 
     sqlite3_stmt *stmt;
     if (sqlite3_prepare_v2(db, query, -1, &stmt, NULL) != SQLITE_OK) {
@@ -383,7 +382,7 @@ invalid:
 /**
  * Make deposit or withdrawal on an account (only if not fixed).
  */
- void makeTransaction(struct User u) {
+ void makeTransaction(struct User *u) {
     int accId;
     printf("Enter the account ID to transact with: ");
     scanf("%d", &accId);
@@ -393,7 +392,7 @@ invalid:
     sprintf(query, 
         "SELECT balance, type FROM Accounts "
         "WHERE account_id=%d AND user_id=%d;", 
-        accId, u.id);
+        accId, u->id);
 
     sqlite3_stmt *stmt;
     if (sqlite3_prepare_v2(db, query, -1, &stmt, NULL) != SQLITE_OK) {
@@ -439,7 +438,7 @@ invalid:
     // 4) UPDATE the new balance
     sprintf(query, 
         "UPDATE Accounts SET balance=%.2f WHERE account_id=%d AND user_id=%d;",
-        newBal, accId, u.id
+        newBal, accId, u->id
     );
     char *errMsg=NULL;
     int rc = sqlite3_exec(db, query, NULL, NULL, &errMsg);
@@ -460,7 +459,7 @@ invalid:
 /**
  * Delete account by skipping the matching record instead of rewriting it.
  */
- void deleteAccount(struct User u)
+ void deleteAccount(struct User *u)
  {
      int accountId;
      printf("Enter the account ID to delete: ");
@@ -470,7 +469,7 @@ invalid:
      char query[256];
      sprintf(query, 
          "DELETE FROM Accounts WHERE account_id=%d AND user_id=%d;",
-         accountId, u.id);
+         accountId, u->id);
  
      char *errMsg = NULL;
      int rc = sqlite3_exec(db, query, NULL, NULL, &errMsg);
@@ -490,7 +489,7 @@ invalid:
 /**
  * Transfer ownership by updating the userId and r.name to the new owner.
  */
- void transferOwnership(struct User u)
+ void transferOwnership(struct User *u)
  {
      int accId;
      printf("Enter the account ID to transfer: ");
@@ -516,7 +515,7 @@ invalid:
      sprintf(query,
          "UPDATE Accounts SET user_id=%d "
          "WHERE account_id=%d AND user_id=%d;",
-         target.id, accId, u.id
+         target.id, accId, u->id
      );
  
      char *errMsg = NULL;
