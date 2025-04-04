@@ -169,6 +169,7 @@ int sql_select_accounts_for_user(struct User *u) {
         printf("SQL prepare error: %s\n", sqlite3_errmsg(db));
         return 0;
     }
+
     int count = 0;
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         count++;
@@ -186,8 +187,35 @@ int sql_select_accounts_for_user(struct User *u) {
         printf("Country: %s\n", country);
         printf("Phone: %d\n", phone);
         printf("Balance: %.2f\n", balance);
-        printf("Type: %s\n\n", type);
+        printf("Type: %s\n", type);
+
+        // Interest Calculation
+        double interest = 0;
+        int day, month, year;
+        sscanf(date, "%d/%d/%d", &day, &month, &year);
+
+        if (strcmp(type, "saving") == 0) {
+            interest = (balance * 0.07) / 12;  // Monthly interest
+            printf("You will gain $%.2f interest on day %d of every month.\n", interest, day);
+        } else if (strcmp(type, "fixed01") == 0) {
+            interest = balance * 0.04 * 1;
+            printf("You will gain $%.2f interest on %02d/%02d/%04d.\n", interest, day, month, year + 1);
+        } else if (strcmp(type, "fixed02") == 0) {
+            interest = balance * 0.05 * 2;
+            printf("You will gain $%.2f interest on %02d/%02d/%04d.\n", interest, day, month, year + 2);
+        } else if (strcmp(type, "fixed03") == 0) {
+            interest = balance * 0.08 * 3;
+            printf("You will gain $%.2f interest on %02d/%02d/%04d.\n", interest, day, month, year + 3);
+        } else {
+            printf("You will not get interests because the account is of type current.\n");
+        }
+        
+        
+
+        printf("\n");
     }
+
     sqlite3_finalize(stmt);
     return count;
 }
+

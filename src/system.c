@@ -195,10 +195,10 @@ invalid:
  
      // Deposit
      while (1) {
-         printf("\nEnter amount to deposit (max $500): ");
+         printf("\nEnter amount to deposit (max $5000): ");
          if (scanf("%lf", &r.amount) == 1 &&
-             r.amount > 0 && r.amount <= 500) break;
-         printf("Deposit must be a valid amount up to $500.\n");
+             r.amount > 0 && r.amount <= 5000) break;
+         printf("Deposit must be a valid amount up to $5000.\n");
          while (getchar() != '\n');
      }
  
@@ -221,6 +221,27 @@ invalid:
          return;
      }
  
+// Show interest message
+double interest = 0;
+if (strcmp(r.accountType, "saving") == 0) {
+    interest = (r.amount * 0.07) / 12;
+    printf("You will gain $%.2f interest on day %d of every month.\n", interest, r.deposit.day);
+} else if (strcmp(r.accountType, "fixed01") == 0) {
+    interest = r.amount * 0.04 * 1;
+    printf("You will gain $%.2f interest on %02d/%02d/%04d.\n", interest, r.deposit.day, r.deposit.month, r.deposit.year + 1);
+} else if (strcmp(r.accountType, "fixed02") == 0) {
+    interest = r.amount * 0.05 * 2;
+    printf("You will gain $%.2f interest on %02d/%02d/%04d.\n", interest, r.deposit.day, r.deposit.month, r.deposit.year + 2);
+} else if (strcmp(r.accountType, "fixed03") == 0) {
+    interest = r.amount * 0.08 * 3;
+    printf("You will gain $%.2f interest on %02d/%02d/%04d.\n", interest, r.deposit.day, r.deposit.month, r.deposit.year + 3);
+} else {
+    printf("You will not get interests because the account is of type current.\n");
+}
+
+
+
+
      success(u);
  }
  
@@ -379,7 +400,31 @@ invalid:
         printf("\nAccount Number: %d\nDate: %s\nCountry: %s\nPhone: %d\nAmount: %.2f\nType: %s\n",
             accountNbr, date, country, phone, balance, type);
 
+
         // Calculate interest, etc...
+        // Interest calculation
+double interest = 0;
+int day, month, year;
+sscanf(date, "%d/%d/%d", &day, &month, &year);
+
+if (strcmp(type, "saving") == 0) {
+    interest = (balance * 0.07) / 12;  // Monthly interest
+    printf("You will gain $%.2f interest on day %d of every month.\n", interest, day);
+} else if (strcmp(type, "fixed01") == 0) {
+    interest = balance * 0.04 * 1;
+    printf("You will gain $%.2f interest on %02d/%02d/%04d.\n", interest, day, month, year + 1);
+} else if (strcmp(type, "fixed02") == 0) {
+    interest = balance * 0.05 * 2;
+    printf("You will gain $%.2f interest on %02d/%02d/%04d.\n", interest, day, month, year + 2);
+} else if (strcmp(type, "fixed03") == 0) {
+    interest = balance * 0.08 * 3;
+    printf("You will gain $%.2f interest on %02d/%02d/%04d.\n", interest, day, month, year + 3);
+} else {
+    printf("You will not get interests because the account is of type current.\n");
+}
+
+
+
     }
     sqlite3_finalize(stmt);
 
