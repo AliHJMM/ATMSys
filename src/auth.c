@@ -1,5 +1,7 @@
 #include "header.h"
 #include "sqlite3.h" // if needed
+#include <ctype.h>
+
 
 // No longer needed
 // const char *USERS = "./data/users.txt";
@@ -39,9 +41,28 @@ const char *getPassword(struct User u)
  */
 void registerMenu(char a[50], char pass[50])
 {
-    printf("Enter a password for registration: ");
-    fflush(stdout);
-    scanf("%s", pass);
+    // Validate username
+if (strlen(a) > 20 || strlen(a) == 0) {
+    printf("Username must be 1–20 characters.\n");
+    exit(1);
+}
+for (int i = 0; i < strlen(a); i++) {
+    if (!isalpha(a[i])) {
+        printf("Username must contain only letters (A-Z, a-z).\n");
+        exit(1);
+    }
+}
+
+// Ask for password
+printf("Enter a password for registration 8 to 16 chars: ");
+fflush(stdout);
+scanf("%s", pass);
+
+int len = strlen(pass);
+if (len < 8 || len > 16) {
+    printf("Password must be between 8 and 16 characters.\n");
+    exit(1);
+}
 
     struct User newU;
     newU.id = 0;
@@ -50,12 +71,12 @@ void registerMenu(char a[50], char pass[50])
 
     int ret = sql_insert_user(&newU);
     if (ret == 0) {
-        printf("✖ User already exists! Try another name.\n");
+        printf("User already exists! Try another name.\n");
         exit(1);
     } else if (ret == -1) {
-        printf("✖ Some DB error occurred.\n");
+        printf("Some DB error occurred.\n");
         exit(1);
     } else {
-        printf("✔ Registration successful! Welcome, %s\n", a);
+        printf("Registration successful! Welcome, %s\n", a);
     }
 }

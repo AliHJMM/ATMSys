@@ -76,7 +76,7 @@ void initMenu(struct User *u)
                 }
                 else
                 {
-                    printf("\nWrong password!! or User Name\n");
+                    printf("\nIncorrect username or password. Please try again.\n");
                     sql_close();
                     exit(1);
                 }
