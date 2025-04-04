@@ -106,7 +106,7 @@ void stayOrReturn(int notGood, void f(struct User u), struct User u)
 void success(struct User u)
 {
     int option;
-    printf("\n✔ Success!\n\n");
+    printf("\nSuccess!\n\n");
 invalid:
     printf("Enter 1 to go to the main menu and 0 to exit!\n");
     scanf("%d", &option);
@@ -127,38 +127,89 @@ invalid:
  void createNewAcc(struct User u)
  {
      struct Record r;
-     // fill in the struct with user input
- 
      system("clear");
      printf("\t\t\t===== New record =====\n");
  
-     printf("\nEnter today's date (mm/dd/yyyy): ");
-     scanf("%d/%d/%d", &r.deposit.month, &r.deposit.day, &r.deposit.year);
+     // Date input
+     while (1) {
+         printf("\nEnter today's date (dd/mm/yyyy): ");
+         if (scanf("%d/%d/%d", &r.deposit.day, &r.deposit.month, &r.deposit.year) == 3 &&
+             r.deposit.day >= 1 && r.deposit.day <= 31 &&
+             r.deposit.month >= 1 && r.deposit.month <= 12 &&
+             r.deposit.year >= 1900 && r.deposit.year <= 2100) break;
+         printf("Invalid date format or values. Use dd/mm/yyyy and valid numbers.\n");
+         while (getchar() != '\n');
+     }
  
-     printf("\nEnter the account number: ");
-     scanf("%d", &r.accountNbr);
+     // Account number
+     while (1) {
+         printf("\nEnter the account number 8 to 12 digits: ");
+         if (scanf("%d", &r.accountNbr) == 1 &&
+             r.accountNbr >= 10000000 && r.accountNbr <= 999999999999) break;
+         printf("Account number must be numeric and between 8 to 12 digits.\n");
+         while (getchar() != '\n');
+     }
  
-     printf("\nEnter the country: ");
-     scanf("%s", r.country);
+     // Country
+     while (1) {
+         printf("\nEnter the country (letters only, max 20 characters): ");
+         scanf("%s", r.country);
+         int valid = 1;
+         if (strlen(r.country) > 20) {
+             valid = 0;
+         }
+         for (int i = 0; r.country[i]; i++) {
+             if (!isalpha(r.country[i])) {
+                 valid = 0;
+                 break;
+             }
+         }
+         if (valid) break;
+         printf("Invalid country. Only letters allowed and max length 20.\n");
+         while (getchar() != '\n');
+     }
  
-     printf("\nEnter the phone number: ");
-     scanf("%d", &r.phone);
+     // Phone
+     while (1) {
+         printf("\nEnter the phone number (8 digits): ");
+         if (scanf("%d", &r.phone) == 1 &&
+             r.phone >= 10000000 && r.phone <= 99999999) break;
+         printf("Phone number must be exactly 8 digits.\n");
+         while (getchar() != '\n');
+     }
  
-     printf("\nEnter amount to deposit: $");
-     scanf("%lf", &r.amount);
+     // Deposit
+     while (1) {
+         printf("\nEnter amount to deposit (max $500): ");
+         if (scanf("%lf", &r.amount) == 1 &&
+             r.amount > 0 && r.amount <= 500) break;
+         printf("Deposit must be a valid amount up to $500.\n");
+         while (getchar() != '\n');
+     }
  
-     printf("\nChoose the type of account:\n\t-> saving\n\t-> current\n\t-> fixed01\n\t-> fixed02\n\t-> fixed03\n\n\tEnter your choice: ");
-     scanf("%s", r.accountType);
+     // Account type
+     while (1) {
+         printf("\nChoose the type of account:\n\t-> saving\n\t-> current\n\t-> fixed01\n\t-> fixed02\n\t-> fixed03\n\n\tEnter your choice: ");
+         scanf("%s", r.accountType);
+         if (strcmp(r.accountType, "saving") == 0 ||
+             strcmp(r.accountType, "current") == 0 ||
+             strcmp(r.accountType, "fixed01") == 0 ||
+             strcmp(r.accountType, "fixed02") == 0 ||
+             strcmp(r.accountType, "fixed03") == 0) break;
+         printf("Invalid account type. Please enter one of the listed options.\n");
+         while (getchar() != '\n');
+     }
  
-     // We no longer do "saveAccountToFile"
-     // Instead:
      int ok = sql_create_account(u, r);
      if (!ok) {
-         printf("✖ Could not create account.\n");
-         // handle error or exit
+         printf("Could not create account.\n");
+         return;
      }
+ 
      success(u);
  }
+ 
+ 
 
 /**
  * Print all accounts that belong to current user.
@@ -216,11 +267,11 @@ invalid:
 
     int rc = sqlite3_exec(db, query, NULL, NULL, &errMsg);
     if (rc != SQLITE_OK) {
-        printf("✖ Error updating: %s\n", errMsg);
+        printf("Error updating: %s\n", errMsg);
         sqlite3_free(errMsg);
         // handle error
     } else if (sqlite3_changes(db) == 0) {
-        printf("✖ Account not found or not yours.\n");
+        printf("Account not found or not yours.\n");
         // handle not found
     } else {
         success(u);
@@ -308,7 +359,7 @@ invalid:
     }
     // 2) if fixed => disallow
     if (strstr(acctType, "fixed") != NULL) {
-        printf("✖ Transactions are not allowed on fixed accounts.\n");
+        printf("Transactions are not allowed on fixed accounts.\n");
         stayOrReturn(0, makeTransaction, u);
         return;
     }
@@ -322,7 +373,7 @@ invalid:
     scanf("%lf", &amount);
 
     if (type == 2 && amount > balance) {
-        printf("✖ Not enough balance!\n");
+        printf("Not enough balance!\n");
         stayOrReturn(0, makeTransaction, u);
         return;
     }
@@ -341,7 +392,7 @@ invalid:
         // handle
     }
     else if (sqlite3_changes(db) == 0) {
-        printf("✖ Something failed or account not yours.\n");
+        printf("Something failed or account not yours.\n");
         // handle
     } else {
         success(u);
@@ -367,11 +418,11 @@ invalid:
      char *errMsg = NULL;
      int rc = sqlite3_exec(db, query, NULL, NULL, &errMsg);
      if (rc != SQLITE_OK) {
-         printf("✖ Error deleting account: %s\n", errMsg);
+         printf("Error deleting account: %s\n", errMsg);
          sqlite3_free(errMsg);
          // handle
      } else if (sqlite3_changes(db) == 0) {
-         printf("✖ No such account or not yours.\n");
+         printf("No such account or not yours.\n");
          // handle
      } else {
          success(u);
@@ -398,7 +449,7 @@ invalid:
      strcpy(target.name, newOwner);
      int found = sql_select_user(&target);
      if (!found) {
-         printf("✖ Target user does not exist.\n");
+         printf("Target user does not exist.\n");
          stayOrReturn(0, transferOwnership, u);
          return;
      }
@@ -417,7 +468,7 @@ invalid:
          printf("Error transferring ownership: %s\n", errMsg);
          sqlite3_free(errMsg);
      } else if (sqlite3_changes(db) == 0) {
-         printf("✖ No such account or not yours.\n");
+         printf("No such account or not yours.\n");
          stayOrReturn(0, transferOwnership, u);
          return;
      } else {
