@@ -65,6 +65,8 @@ void sql_close(void) {
  *  -1 on other error
  */
  int sql_insert_user(struct User *u) {
+    printf("[DEBUG] Inserting user: %s with password: %s\n", u->name, u->password);  // ADD THIS LINE
+
     const char *query = "INSERT INTO Users(name, password) VALUES (?, ?);";
     sqlite3_stmt *stmt;
 
@@ -78,11 +80,11 @@ void sql_close(void) {
 
     int rc = sqlite3_step(stmt);
     if (rc != SQLITE_DONE) {
+        printf("Insert step error: %s\n", sqlite3_errmsg(db));  // ADD THIS LINE
         if (rc == SQLITE_CONSTRAINT) {
             sqlite3_finalize(stmt);
-            return 0; // user already exists
+            return 0;
         } else {
-            printf("Insert error: %s\n", sqlite3_errmsg(db));
             sqlite3_finalize(stmt);
             return -1;
         }
@@ -91,6 +93,7 @@ void sql_close(void) {
     sqlite3_finalize(stmt);
     return 1;
 }
+
 
 
 /**

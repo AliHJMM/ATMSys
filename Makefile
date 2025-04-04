@@ -11,7 +11,8 @@ src/system.o: src/system.c src/header.h
 	$(CC) -c src/system.c -o src/system.o
 
 src/auth.o: src/auth.c src/header.h
-	$(CC) -c src/auth.c -o src.auth.o
+	$(CC) -c src/auth.c -o src/auth.o
+
 
 src/sql.o: src/sql.c src/header.h
 	$(CC) -c src/sql.c -o src/sql.o
