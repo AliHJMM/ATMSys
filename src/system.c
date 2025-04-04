@@ -68,50 +68,48 @@ int getAccountFromFile(FILE *ptr, char name[50], struct Record *r)
  * Helper to let user retry or return to main menu.
  */
  void stayOrReturn(int errorCode, void f(struct User *), struct User *u)
- {
-     int option;
-     system("clear");
- 
-     // Print message based on the error code
-     switch (errorCode) {
-         case 1:
-             printf("No account found with the given ID.\n");
-             break;
-         case 2:
-             printf("Not enough balance!\n");
-             break;
-         case 3:
-             printf("Invalid transaction type! Please enter 1 or 2.\n");
-             break;
-         case 4:
-             printf("Invalid input. Must be numeric.\n");
-             break;
-         case 5:
-             printf("Transactions not allowed on fixed accounts.\n");
-             break;
-         default:
-             printf("An error occurred.\n");
-             break;
-     }
- 
- invalid_input:
-     printf("\nEnter 0 to try again, 1 to return to main menu, or 2 to exit: ");
-     if (scanf("%d", &option) != 1) {
-         while (getchar() != '\n');
-         goto invalid_input;
-     }
- 
-     if (option == 0) {
-         f(u);
-     } else if (option == 1) {
-         mainMenu(u);
-     } else if (option == 2) {
-         exit(0);
-     } else {
-         printf("Invalid option.\n");
-         goto invalid_input;
-     }
- }
+{
+    int option;
+    system("clear");
+
+    // More descriptive error messages
+    switch (errorCode) {
+        case 1:
+            printf("No account found with the given input.\n");
+            break;
+        case 2:
+            printf("Not enough balance for this transaction.\n");
+            break;
+        case 3:
+            printf("Invalid transaction type! Please choose 1 (Deposit) or 2 (Withdraw).\n");
+            break;
+        case 4:
+            printf("Invalid input! Please enter a positive number.\n");
+            break;
+        case 5:
+            printf("Transactions are not allowed on fixed accounts.\n");
+            break;
+        default:
+            printf("Invalid input or operation. Please try again.\n");
+            break;
+    }
+
+    do {
+        printf("\nEnter 0 to try again, 1 to return to main menu, or 2 to exit: ");
+        if (scanf("%d", &option) != 1 || option < 0 || option > 2) {
+            printf("Please enter 0, 1, or 2 only.\n");
+            while (getchar() != '\n'); // Clear invalid input
+            continue;
+        }
+
+        if (option == 0) f(u);
+        else if (option == 1) mainMenu(u);
+        else exit(0);
+        break;
+
+    } while (1);
+}
+
  
  
 
@@ -579,8 +577,16 @@ if (strcmp(type, "saving") == 0) {
  void deleteAccount(struct User *u)
 {
     int accNumber;
-    printf("Enter the account number to delete: ");
-    scanf("%d", &accNumber);
+
+    while (1) {
+        printf("Enter the account number to delete: ");
+        if (scanf("%d", &accNumber) != 1 || accNumber <= 0) {
+            while (getchar() != '\n');  // clear invalid input
+            printf("Invalid input. Account number must be a positive number.\n");
+            continue;
+        }
+        break;
+    }
 
     // Build query to delete using account_nbr and user_id
     char query[256];
@@ -591,15 +597,18 @@ if (strcmp(type, "saving") == 0) {
     char *errMsg = NULL;
     int rc = sqlite3_exec(db, query, NULL, NULL, &errMsg);
     if (rc != SQLITE_OK) {
-        printf("Error deleting account: %s\n", errMsg);
+        printf("Failed to delete account: %s\n", errMsg);
         sqlite3_free(errMsg);
     } else if (sqlite3_changes(db) == 0) {
-        printf("No such account or not yours.\n");
+        printf("No account found with that number, or it does not belong to you.\n");
+        stayOrReturn(0, deleteAccount, u);
     } else {
+        printf("Account deleted successfully.\n");
         success(u);
     }
 }
 
+ 
  
 
 /**
@@ -607,9 +616,17 @@ if (strcmp(type, "saving") == 0) {
  */
  void transferOwnership(struct User *u)
  {
-     int accId;
-     printf("Enter the account ID to transfer: ");
-     scanf("%d", &accId);
+     int accNumber;
+ 
+     while (1) {
+         printf("Enter the account number to transfer: ");
+         if (scanf("%d", &accNumber) != 1 || accNumber <= 0) {
+             while (getchar() != '\n');  // clear input buffer
+             printf("Invalid input. Account number must be a positive number.\n");
+             continue;
+         }
+         break;
+     }
  
      char newOwner[50];
      printf("Enter username to transfer ownership to: ");
@@ -621,7 +638,7 @@ if (strcmp(type, "saving") == 0) {
      strcpy(target.name, newOwner);
      int found = sql_select_user(&target);
      if (!found) {
-         printf("Target user does not exist.\n");
+         printf("Target user does not exist. Please check the username.\n");
          stayOrReturn(0, transferOwnership, u);
          return;
      }
@@ -630,20 +647,21 @@ if (strcmp(type, "saving") == 0) {
      char query[256];
      sprintf(query,
          "UPDATE Accounts SET user_id=%d "
-         "WHERE account_id=%d AND user_id=%d;",
-         target.id, accId, u->id
+         "WHERE account_nbr=%d AND user_id=%d;",
+         target.id, accNumber, u->id
      );
  
      char *errMsg = NULL;
      int rc = sqlite3_exec(db, query, NULL, NULL, &errMsg);
      if (rc != SQLITE_OK) {
-         printf("Error transferring ownership: %s\n", errMsg);
+         printf("Failed to transfer ownership: %s\n", errMsg);
          sqlite3_free(errMsg);
      } else if (sqlite3_changes(db) == 0) {
-         printf("No such account or not yours.\n");
+         printf("No matching account found or it's not owned by you.\n");
          stayOrReturn(0, transferOwnership, u);
          return;
      } else {
+         printf("Ownership transferred successfully to %s.\n", newOwner);
          success(u);
      }
  }
