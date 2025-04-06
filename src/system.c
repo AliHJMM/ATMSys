@@ -89,6 +89,9 @@ int getAccountFromFile(FILE *ptr, char name[50], struct Record *r)
         case 5:
             printf("Transactions are not allowed on fixed accounts.\n");
             break;
+        case 6:
+        printf("Account number not valid or not found. Please try again.\n");
+        break;
         default:
             printf("Invalid input or operation. Please try again.\n");
             break;
@@ -156,9 +159,9 @@ invalid:
  
      // Account number
      while (1) {
-        printf("\nEnter the account number (8 to 12 digits): ");
-        if (scanf("%d", &r.accountNbr) != 1 || r.accountNbr < 10000000 || r.accountNbr > 999999999999) {
-            printf("Account number must be numeric and between 8 to 12 digits.\n");
+        printf("\nEnter the account number (1 to 12 digits): ");
+        if (scanf("%d", &r.accountNbr) != 1 || r.accountNbr <= 0 || r.accountNbr > 999999999999) {
+            printf("Account number must be numeric and between 1 to 12 digits.\n");
             while (getchar() != '\n');
             continue;
         }
@@ -198,9 +201,9 @@ invalid:
  
      // Phone
      while (1) {
-        printf("\nEnter the phone number (8 digits): ");
-        if (scanf("%d", &r.phone) != 1 || r.phone < 10000000 || r.phone > 99999999) {
-            printf("Phone number must be exactly 8 digits.\n");
+        printf("\nEnter the phone number (1 to 12 digits): ");
+        if (scanf("%d", &r.phone) != 1 || r.phone <= 0 || r.phone > 999999999999) {
+            printf("Phone number must be numeric and between 1 to 12 digits.\n");
             while (getchar() != '\n');
             continue;
         }
@@ -372,8 +375,8 @@ if (strcmp(r.accountType, "saving") == 0) {
                 printf("Invalid input. Digits only.\n");
                 continue;
             }
-            if (newPhone < 10000000 || newPhone > 99999999) {
-                printf("Phone number must be exactly 8 digits.\n");
+            if (newPhone <= 0 || newPhone > 999999999999) {
+                printf("Phone number must be numeric and between 1 to 12 digits.\n");   
                 continue;
             }
             break;
@@ -601,7 +604,7 @@ if (strcmp(type, "saving") == 0) {
         sqlite3_free(errMsg);
     } else if (sqlite3_changes(db) == 0) {
         printf("No account found with that number, or it does not belong to you.\n");
-        stayOrReturn(0, deleteAccount, u);
+        stayOrReturn(6, deleteAccount, u);
     } else {
         printf("Account deleted successfully.\n");
         success(u);
